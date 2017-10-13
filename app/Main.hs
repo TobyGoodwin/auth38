@@ -8,8 +8,8 @@ import           Data.Text                   (Text)
 import           Network.HTTP.Client.Conduit (Manager, newManager)
 import           Yesod
 import           Yesod.Auth
-import           Yesod.Auth.BrowserId
-
+import           Yesod.Auth.Dummy
+import           Yesod.Auth.Mythic
 
 data App = App
     { httpManager :: Manager
@@ -23,7 +23,7 @@ mkYesod "App" [parseRoutes|
 instance Yesod App where
     -- Note: In order to log in with BrowserID, you must correctly
     -- set your hostname here.
-    approot = ApprootStatic "http://localhost:3000"
+    approot = ApprootStatic "https://www.dev.mythic-beasts.com"
 
 instance YesodAuth App where
     type AuthId App = Text
@@ -33,7 +33,7 @@ instance YesodAuth App where
     logoutDest _ = HomeR
 
     authPlugins _ =
-        [ authBrowserId def
+        [ authMythic
         ]
 
     authHttpManager = httpManager

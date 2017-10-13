@@ -13,7 +13,7 @@ import Yesod.Core
 
 authMythic :: YesodAuth m => AuthPlugin m
 authMythic =
-    AuthPlugin "Mythic" dispatch login
+    AuthPlugin "mythic" dispatch login
   where
     dispatch "POST" [] = do
         ident <- lift $ runInputPost $ ireq textField "ident"
