@@ -11,6 +11,7 @@ module Yesod.Auth.Mythic
     ) where
 
 import Data.Text (Text)
+import qualified Data.Text as T
 import Yesod.Auth
 -- Y.A.Message defines internationalized messages to be used with
 -- loginErrorMessageI
@@ -19,7 +20,8 @@ import Yesod.Form
 import Yesod.Core
 
 -- an auth plugin needs three things: a name, a dispatch function, and a login
--- widget
+-- widget. the login widget is normally used for the "GET /login" case, which
+-- does not need to be handled by dispatch
 authMythic :: YesodAuth m => AuthPlugin m
 authMythic = AuthPlugin "mythic" dispatch loginWidget
 
@@ -39,7 +41,9 @@ postLoginR = do
                     <$> ireq textField "ident"
                     <*> ireq textField "password"
   case result of
-    FormSuccess (MythicLoginForm ident _) -> lift $ setCredsRedirect $ Creds "mythic" ident []
+    FormSuccess (MythicLoginForm ident pass)
+      | ident == T.reverse pass
+        -> lift $ setCredsRedirect $ Creds "mythic" ident []
     _ -> loginErrorMessageI LoginR Msg.InvalidLogin
 
 -- the login widget is called with a single argument which is a function that
@@ -58,26 +62,33 @@ $newline never
     loginForm csrf = do
       (identRes, identView) <- mreq textField identSettings Nothing
       (passwordRes, passwordView) <- mreq passwordField passwordSettings Nothing
+      -- the next line is standard yesod form stuff, but if <$> and <*> here
+      -- bother you, you may want to revise applicative functors
+      -- http://learnyouahaskell.com/functors-applicative-functors-and-monoids#applicative-functors
+      -- the functor in question here is FormResult, look up its Applicative
+      -- instance to see exactly what's happening
       let mythicRes = MythicLoginForm <$> identRes <*> passwordRes
-          widget = do
+      let widget = do
             [whamlet|
               #{csrf}
               <div>
+                Email or account number:
                 ^{fvInput identView}
               <div>
+                Password:
                 ^{fvInput passwordView}
             |]
       return (mythicRes, widget)
     url = PluginR "mythic" ["login"]
     identSettings = FieldSettings
-                      { fsLabel = "Email or account number"
+                      { fsLabel = "unused"
                       , fsTooltip = Nothing
                       , fsId = Just "ident"
                       , fsName = Just "ident"
                       , fsAttrs = [("autofocus", ""), ("placeholder", "email")]
                       }
     passwordSettings = FieldSettings
-                      { fsLabel = "Password"
+                      { fsLabel = "unused"
                       , fsTooltip = Nothing
                       , fsId = Just "password"
                       , fsName = Just "password"
