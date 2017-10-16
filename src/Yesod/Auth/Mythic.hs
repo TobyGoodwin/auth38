@@ -17,8 +17,10 @@ import qualified Yesod.Auth.Message as Msg
 import Yesod.Form (FormResult(..), runInputPostResult, textField, ireq)
 import Yesod.Core
 
+-- an auth plugin needs three things: a name, a dispatch function, and a login
+-- widget
 authMythic :: YesodAuth m => AuthPlugin m
-authMythic = AuthPlugin "mythic" dispatch login
+authMythic = AuthPlugin "mythic" dispatch loginWidget
 
 -- arguments to dispatch are the HTTP method and a list of path elements
 dispatch :: YesodAuth master =>
@@ -26,20 +28,26 @@ dispatch :: YesodAuth master =>
 dispatch "POST" ["login"] = postLoginR >>= sendResponse
 dispatch _ _ = notFound
 
+data MythicLogin = MythicLogin Text Text
+
 -- ghc cannot infer this type ("Couldn't match type ... because type variable
 -- master would escape its scope")
 postLoginR :: YesodAuth m => HandlerT Auth (HandlerT m IO) TypedContent
 postLoginR = do
-  result <- lift $ runInputPostResult $ ireq textField "ident"
+  result <- lift $ runInputPostResult $ MythicLogin
+                    <$> ireq textField "ident"
+                    <*> ireq textField "password"
   case result of
-    FormSuccess ident -> lift $ setCredsRedirect $ Creds "mythic" ident []
+    FormSuccess (MythicLogin ident _) -> lift $ setCredsRedirect $ Creds "mythic" ident []
     _ -> loginErrorMessageI LoginR Msg.InvalidLogin
 
-login authToMaster = do
+-- the login widget is called with a single argument which is a function that
+-- converts a route in the auth subsite to a route in the parent site
+loginWidget convertRoute = do
     request <- getRequest
     toWidget [hamlet|
 $newline never
-<form method="post" action="@{authToMaster url}">
+<form method="post" action="@{convertRoute url}">
     $maybe t <- reqToken request
         <input type=hidden name=#{defaultCsrfParamName} value=#{t}>
     Your new identifier is: #
