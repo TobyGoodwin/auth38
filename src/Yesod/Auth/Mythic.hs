@@ -17,9 +17,10 @@ import Yesod.Core
 authMythic :: YesodAuth m => AuthPlugin m
 authMythic = AuthPlugin "mythic" dispatch login
 
+-- first argument to dispatch is the HTTP method, second is a list of Pieces
 dispatch :: YesodAuth master =>
               Text -> [Text] -> AuthHandler master TypedContent
-dispatch "POST" [] = do
+dispatch "POST" ["login"] = do
     ident <- lift $ runInputPost $ ireq textField "ident"
     lift $ setCredsRedirect $ Creds "mythic" ident []
 dispatch _ _ = notFound
@@ -36,4 +37,4 @@ $newline never
     <input type="submit" value="Mythic Login">
 |]
   where
-    url = PluginR "mythic" []
+    url = PluginR "mythic" ["login"]
