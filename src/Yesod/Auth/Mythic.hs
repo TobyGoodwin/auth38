@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
@@ -14,7 +15,7 @@ import Yesod.Auth
 -- Y.A.Message defines internationalized messages to be used with
 -- loginErrorMessageI
 import qualified Yesod.Auth.Message as Msg
-import Yesod.Form (FormResult(..), runInputPostResult, textField, ireq)
+import Yesod.Form
 import Yesod.Core
 
 -- an auth plugin needs three things: a name, a dispatch function, and a login
@@ -28,31 +29,57 @@ dispatch :: YesodAuth master =>
 dispatch "POST" ["login"] = postLoginR >>= sendResponse
 dispatch _ _ = notFound
 
-data MythicLogin = MythicLogin Text Text
+data MythicLoginForm = MythicLoginForm Text Text
 
 -- ghc cannot infer this type ("Couldn't match type ... because type variable
 -- master would escape its scope")
 postLoginR :: YesodAuth m => HandlerT Auth (HandlerT m IO) TypedContent
 postLoginR = do
-  result <- lift $ runInputPostResult $ MythicLogin
+  result <- lift $ runInputPostResult $ MythicLoginForm
                     <$> ireq textField "ident"
                     <*> ireq textField "password"
   case result of
-    FormSuccess (MythicLogin ident _) -> lift $ setCredsRedirect $ Creds "mythic" ident []
+    FormSuccess (MythicLoginForm ident _) -> lift $ setCredsRedirect $ Creds "mythic" ident []
     _ -> loginErrorMessageI LoginR Msg.InvalidLogin
 
 -- the login widget is called with a single argument which is a function that
 -- converts a route in the auth subsite to a route in the parent site
+loginWidget :: YesodAuth m =>
+  (Route Auth -> Route m) -> WidgetT m IO ()
 loginWidget convertRoute = do
-    request <- getRequest
-    toWidget [hamlet|
+  (widget, enctype) <- liftWidgetT $ generateFormPost loginForm
+  [whamlet|
 $newline never
-<form method="post" action="@{convertRoute url}">
-    $maybe t <- reqToken request
-        <input type=hidden name=#{defaultCsrfParamName} value=#{t}>
-    Your new identifier is: #
-    <input type="text" name="ident">
+<form method="post" action="@{convertRoute url}" enctype=#{enctype}>
+    ^{widget}
     <input type="submit" value="Mythic Login">
 |]
   where
+    loginForm csrf = do
+      (identRes, identView) <- mreq textField identSettings Nothing
+      (passwordRes, passwordView) <- mreq passwordField passwordSettings Nothing
+      let mythicRes = MythicLoginForm <$> identRes <*> passwordRes
+          widget = do
+            [whamlet|
+              #{csrf}
+              <div>
+                ^{fvInput identView}
+              <div>
+                ^{fvInput passwordView}
+            |]
+      return (mythicRes, widget)
     url = PluginR "mythic" ["login"]
+    identSettings = FieldSettings
+                      { fsLabel = "Email or account number"
+                      , fsTooltip = Nothing
+                      , fsId = Just "ident"
+                      , fsName = Just "ident"
+                      , fsAttrs = [("autofocus", ""), ("placeholder", "email")]
+                      }
+    passwordSettings = FieldSettings
+                      { fsLabel = "Password"
+                      , fsTooltip = Nothing
+                      , fsId = Just "password"
+                      , fsName = Just "password"
+                      , fsAttrs = [("placeholder", "password")]
+                      }
