@@ -17,10 +17,12 @@ library
   hs-source-dirs:      src
   exposed-modules:     Yesod.Auth.Mythic
   build-depends:       base >= 4.7 && < 5
+                     , text
                      , yesod-auth
                      , yesod-core
                      , yesod-form
   default-language:    Haskell2010
+  ghc-options:         -Wall -fwarn-tabs -O0
 
 executable auth38
   hs-source-dirs:      app
