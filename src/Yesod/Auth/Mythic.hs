@@ -11,19 +11,29 @@ module Yesod.Auth.Mythic
 
 import Data.Text (Text)
 import Yesod.Auth
-import Yesod.Form (runInputPost, textField, ireq)
+-- Y.A.Message defines internationalized messages to be used with
+-- loginErrorMessageI
+import qualified Yesod.Auth.Message as Msg
+import Yesod.Form (FormResult(..), runInputPostResult, textField, ireq)
 import Yesod.Core
 
 authMythic :: YesodAuth m => AuthPlugin m
 authMythic = AuthPlugin "mythic" dispatch login
 
--- first argument to dispatch is the HTTP method, second is a list of Pieces
+-- arguments to dispatch are the HTTP method and a list of path elements
 dispatch :: YesodAuth master =>
               Text -> [Text] -> AuthHandler master TypedContent
-dispatch "POST" ["login"] = do
-    ident <- lift $ runInputPost $ ireq textField "ident"
-    lift $ setCredsRedirect $ Creds "mythic" ident []
+dispatch "POST" ["login"] = postLoginR >>= sendResponse
 dispatch _ _ = notFound
+
+-- ghc cannot infer this type ("Couldn't match type ... because type variable
+-- master would escape its scope")
+postLoginR :: YesodAuth m => HandlerT Auth (HandlerT m IO) TypedContent
+postLoginR = do
+  result <- lift $ runInputPostResult $ ireq textField "ident"
+  case result of
+    FormSuccess ident -> lift $ setCredsRedirect $ Creds "mythic" ident []
+    _ -> loginErrorMessageI LoginR Msg.InvalidLogin
 
 login authToMaster = do
     request <- getRequest
