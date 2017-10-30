@@ -20,12 +20,13 @@ import Yesod.Form
 import Yesod.Core
 
 -- an auth plugin needs three things: a name, a dispatch function, and a login
--- widget. the login widget is normally used for the "GET /login" case, which
--- does not need to be handled by dispatch
+-- widget
 authMythic :: YesodAuth m => AuthPlugin m
 authMythic = AuthPlugin "mythic" dispatch loginWidget
 
--- arguments to dispatch are the HTTP method and a list of path elements
+-- arguments to dispatch are the HTTP method and a list of path elements. the
+-- "GET /login" case does not need to be handled explicitly: the framework will
+-- automatically display the login widget in this case
 dispatch :: YesodAuth master =>
               Text -> [Text] -> AuthHandler master TypedContent
 dispatch "POST" ["login"] = postLoginR >>= sendResponse
@@ -72,7 +73,7 @@ $newline never
             [whamlet|
               #{csrf}
               <div>
-                Email or account number:
+                Username:
                 ^{fvInput identView}
               <div>
                 Password:
@@ -85,7 +86,7 @@ $newline never
                       , fsTooltip = Nothing
                       , fsId = Just "ident"
                       , fsName = Just "ident"
-                      , fsAttrs = [("autofocus", ""), ("placeholder", "email")]
+                      , fsAttrs = [("autofocus", ""), ("placeholder", "username")]
                       }
     passwordSettings = FieldSettings
                       { fsLabel = "unused"
