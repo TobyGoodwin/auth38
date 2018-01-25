@@ -3,9 +3,10 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
 
--- | Provides a dummy authentication module that simply lets a user specify
--- his/her identifier. This is not intended for real world use, just for
--- testing.
+-- | Provides a dummy authentication module that allows you to make up any
+-- username you want. Unlike `Yesod.Auth.Dummy`, you also need to supply a
+-- password which must be the username backwards. This is not intended for real
+-- world use, just for testing.
 module Yesod.Auth.Mythic
     ( authMythic
     ) where

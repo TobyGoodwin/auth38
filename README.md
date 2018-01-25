@@ -1,7 +1,7 @@
 # auth38
 
 I implemented and maintain a yesod website for my employer. For various reasons
-we have our own authencation server. I realised fairly early on that it would
+we have our own authentication server. I realised fairly early on that it would
 make sense to have a Yesod.Auth plugin that communicated with our
 authentication server. It took me quite a while and a number of aborted
 attempts to get this working. (The number "38" in this project's title was made
